@@ -1,0 +1,41 @@
+{
+    "name": "eliyas5044/laravel-file-api",
+    "description": "File manager API",
+    "license": "license",
+    "authors": [
+        {
+            "name": "Eliyas Hossain",
+            "email": "eliyas.ru1991@gmail.com",
+            "homepage": "https://github.com/eliyas5044/laravel-file-api"
+        }
+    ],
+    "homepage": "https://github.com/eliyas5044/laravel-file-api",
+    "keywords": ["Laravel", "LaravelFileApi"],
+    "require": {
+        "illuminate/support": "~6|~7|~8"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~7.0|~8.0|~9.0",
+        "orchestra/testbench": "~5|~6"
+    },
+    "autoload": {
+        "psr-4": {
+            "Eliyas5044\\LaravelFileApi\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Eliyas5044\\LaravelFileApi\\Tests\\": "tests"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Eliyas5044\\LaravelFileApi\\LaravelFileApiServiceProvider"
+            ],
+            "aliases": {
+                "LaravelFileApi": "Eliyas5044\\LaravelFileApi\\Facades\\LaravelFileApi"
+            }
+        }
+    }
+}
