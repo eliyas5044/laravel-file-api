@@ -5,6 +5,7 @@ namespace Eliyas5044\LaravelFileApi\Http\Controllers;
 use Carbon\Carbon;
 use Eliyas5044\LaravelFileApi\Http\Resources\Folder\FolderResource;
 use Eliyas5044\LaravelFileApi\Models\Folder;
+use Eliyas5044\LaravelFileApi\Models\File;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -105,6 +106,7 @@ class FolderController extends Controller
 
         DB::beginTransaction();
         try {
+            
             // create slug
             $slug = $this->checkFolderSlug($request->get('name'));
             $old_path = $folder->slug;
@@ -121,6 +123,19 @@ class FolderController extends Controller
             ]);
             // create directory
             Storage::move($old_path, $new_path);
+            
+            //Update path and url into these files and folder
+            $folder_id = $request->get('id');
+            $search = $request->get('slug');
+            $replace = $folder->slug;
+            File::where('folder_id', '=', $folder_id)
+                ->get()
+                ->map(function ($item) use ($search, $replace) {
+                    $item->path = str_replace($search, $replace, $item->path);
+                    $item->url = str_replace($search, $replace, $item->url);
+                    $item->save();
+                    return $item;
+                });
 
             DB::commit();
 
@@ -156,7 +171,7 @@ class FolderController extends Controller
 
             Storage::deleteDirectory($directory);
 
-            Folder::query()->whereIn('id', $folder_ids)->delete();
+            Folder::query()->whereIn('id', [$folder_ids])->delete();
 
             DB::commit();
             return response()->json([
@@ -249,4 +264,73 @@ class FolderController extends Controller
 
         return round($bytes, 2) . ' ' . $units[$i];
     }
+
+    /**
+     * @param Request $request
+     * @param Folder $folder
+     * @return JsonResponse
+     */
+    public function moveFolder(Request $request, Folder $folder): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            
+            // create slug
+            $slug = $this->checkFolderSlug($request->get('name'));
+            $old_path = $folder->slug;
+            $new_path = $slug;
+            if ($request->has('parent_id')) {
+                $old_path = $folder->parent_folder . '/' . $folder->slug;
+                $new_path = $request->get('slug') . '/' . $folder->slug;
+                $parent_folder = $request->get('slug');
+
+                if($request->get('parent_folder')) {
+                    $parent_folder = $request->get('parent_folder') .'/'. $request->get('slug');
+                    $new_path = $parent_folder . '/' . $folder->slug;
+                }
+            }
+
+
+            $folder->update([
+                'parent_id' => $request->get('id'),
+                'parent_folder' => $parent_folder,
+            ]);
+
+            // create directory
+            Storage::move($old_path, $new_path);
+            
+            //Update path and url into these files and folder
+            // $folder_id = $request->get('id');
+            // $search = $request->get('slug');
+            // $replace = $folder->slug;
+            // File::where('folder_id', '=', $folder_id)
+            //     ->get()
+            //     ->map(function ($item) use ($search, $replace) {
+            //         $item->path = str_replace($search, $replace, $item->path);
+            //         $item->url = str_replace($search, $replace, $item->url);
+            //         $item->save();
+            //         return $item;
+            //     });
+
+            DB::commit();
+
+            return response()->json([
+                'data' => $folder,
+                'message' => 'Successfully Updated.'
+            ]);
+        } catch (Throwable $exception) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Something went wrong, please try again later.',
+                'error' => $exception->getMessage()
+            ], 400);
+        }
+    }
+
 }
+

@@ -123,4 +123,13 @@ class FileController extends Controller
 
         return $slug;
     }
+
+    /**
+     * @param Request $request
+     */
+    protected function download(Request $request)
+    {
+        $path = $request->get('path');
+        return Storage::download($path);
+    }
 }
