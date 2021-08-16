@@ -102,6 +102,15 @@ class FileController extends Controller
     }
 
     /**
+     * @param Request $request
+     */
+    public function download(Request $request)
+    {
+        $path = $request->get('path');
+        return Storage::download($path);
+    }
+    
+    /**
      * @param $name
      * @return string
      */
