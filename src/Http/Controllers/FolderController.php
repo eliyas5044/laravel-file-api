@@ -157,25 +157,76 @@ class FolderController extends Controller
      * @param Request $request
      * @return JsonResponse
      */
-    public function destroy(Request $request): JsonResponse
+    public function destroy(Request $request, Folder $folder): JsonResponse
     {
         $request->validate([
             'folder_names' => 'required',
-            'folder_ids' => 'required'
         ]);
 
         DB::beginTransaction();
         try {
             $directory = $request->get('folder_names');
-            $folder_ids = $request->get('folder_ids');
 
             Storage::deleteDirectory($directory);
-
-            Folder::query()->whereIn('id', [$folder_ids])->delete();
+            $folder->delete();
 
             DB::commit();
             return response()->json([
                 'message' => 'Successfully Deleted'
+            ]);
+        } catch (Throwable $exception) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Something went wrong, please try again later.',
+                'error' => $exception->getMessage()
+            ], 400);
+        }
+    }
+
+     /**
+     * @param Request $request
+     * @param Folder $folder
+     * @return JsonResponse
+     */
+    public function moveFolder(Request $request, Folder $folder): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            
+            // create slug
+            $slug = $this->checkFolderSlug($request->get('name'));
+            $old_path = $folder->slug;
+            $new_path = $slug;
+            if ($request->has('parent_id')) {
+                $old_path = $folder->parent_folder . '/' . $folder->slug;
+                $new_path = $request->get('slug') . '/' . $folder->slug;
+                $parent_folder = $request->get('slug');
+
+                if($request->get('parent_folder')) {
+                    $parent_folder = $request->get('parent_folder') .'/'. $request->get('slug');
+                    $new_path = $parent_folder . '/' . $folder->slug;
+                }
+            }
+
+
+            $folder->update([
+                'parent_id' => $request->get('id'),
+                'parent_folder' => $parent_folder,
+            ]);
+
+            // create directory
+            Storage::move($old_path, $new_path);
+        
+            DB::commit();
+
+            return response()->json([
+                'data' => $folder,
+                'message' => 'Successfully Updated.'
             ]);
         } catch (Throwable $exception) {
             DB::rollBack();
@@ -263,73 +314,6 @@ class FolderController extends Controller
         }
 
         return round($bytes, 2) . ' ' . $units[$i];
-    }
-
-    /**
-     * @param Request $request
-     * @param Folder $folder
-     * @return JsonResponse
-     */
-    public function moveFolder(Request $request, Folder $folder): JsonResponse
-    {
-        $request->validate([
-            'name' => 'required'
-        ]);
-
-        DB::beginTransaction();
-        try {
-            
-            // create slug
-            $slug = $this->checkFolderSlug($request->get('name'));
-            $old_path = $folder->slug;
-            $new_path = $slug;
-            if ($request->has('parent_id')) {
-                $old_path = $folder->parent_folder . '/' . $folder->slug;
-                $new_path = $request->get('slug') . '/' . $folder->slug;
-                $parent_folder = $request->get('slug');
-
-                if($request->get('parent_folder')) {
-                    $parent_folder = $request->get('parent_folder') .'/'. $request->get('slug');
-                    $new_path = $parent_folder . '/' . $folder->slug;
-                }
-            }
-
-
-            $folder->update([
-                'parent_id' => $request->get('id'),
-                'parent_folder' => $parent_folder,
-            ]);
-
-            // create directory
-            Storage::move($old_path, $new_path);
-            
-            //Update path and url into these files and folder
-            // $folder_id = $request->get('id');
-            // $search = $request->get('slug');
-            // $replace = $folder->slug;
-            // File::where('folder_id', '=', $folder_id)
-            //     ->get()
-            //     ->map(function ($item) use ($search, $replace) {
-            //         $item->path = str_replace($search, $replace, $item->path);
-            //         $item->url = str_replace($search, $replace, $item->url);
-            //         $item->save();
-            //         return $item;
-            //     });
-
-            DB::commit();
-
-            return response()->json([
-                'data' => $folder,
-                'message' => 'Successfully Updated.'
-            ]);
-        } catch (Throwable $exception) {
-            DB::rollBack();
-
-            return response()->json([
-                'message' => 'Something went wrong, please try again later.',
-                'error' => $exception->getMessage()
-            ], 400);
-        }
     }
 
 }

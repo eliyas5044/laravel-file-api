@@ -105,7 +105,7 @@ class FileController extends Controller
      * @param $name
      * @return string
      */
-    public function checkFileSlug($name): string
+    protected function checkFileSlug($name): string
     {
         $slug = Str::slug($name, '-', app()->getLocale());
 

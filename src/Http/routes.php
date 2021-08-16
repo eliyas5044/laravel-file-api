@@ -11,7 +11,7 @@ Route::prefix(config('laravel-file-api.routePrefix'))->middleware(config('larave
     Route::post('folder/{folder}', [FolderController::class, 'update']);
     Route::post('folder/move/{folder}', [FolderController::class, 'moveFolder']);
     Route::get('folder/{folder}', [FolderController::class, 'show']);
-    Route::delete('folder/{id}', [FolderController::class, 'destroy']);
+    Route::delete('folder/{folder}', [FolderController::class, 'destroy']);
 
     // file routes
     Route::get('file/download', [FileController::class, 'download']);
